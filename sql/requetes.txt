@@ -1,0 +1,76 @@
+
+delimiter $$
+create trigger augmenter_quantite before delete
+on ajoute__panier_
+for each row 
+
+begin
+
+update livre set quantiteLivre = quantiteLivre + 1 where idLivre = OLD.idLivre;
+if (select quantiteLivre from livre where idLivre = OLD.idLivre) > 0 then
+update livre set ruptureStock = false where idLivre = OLD.idLivre;
+end if;
+
+end$$
+
+delimiter ;
+
+delimiter $$
+create trigger a_achete after insert
+on achete
+for each row 
+
+begin
+
+delete from ajoute__panier_ where idClient = new.idClient;
+
+end$$
+
+delimiter ;
+
+create or replace view livre_v as 
+select livre.idLivre, livre.titreLivre, livre.descLivre, livre.coverLivre, genre.nomGenre, auteur.prenomAuteur, auteur.nomAuteur, livre.prixLivre, livre.quantiteLivre, livre.ruptureStock
+from ((livre
+inner join genre on livre.idGenre = genre.idGenre)
+inner join auteur on livre.idAuteur = auteur.idAuteur);
+
+create or replace view livre_v_min as 
+select livre.idLivre, livre.titreLivre, genre.nomGenre, auteur.prenomAuteur, auteur.nomAuteur, livre.prixLivre, livre.quantiteLivre, livre.ruptureStock
+from ((livre
+inner join genre on livre.idGenre = genre.idGenre)
+inner join auteur on livre.idAuteur = auteur.idAuteur);
+
+create or replace view panier_v as
+select ajoute__panier_.idClient, client.prenomClient, client.nomClient, ajoute__panier_.idLivre, livre.titreLivre, livre.coverLivre, livre.prixLivre
+from ((ajoute__panier_
+inner join client on ajoute__panier_.idClient = client.idClient)
+inner join livre on ajoute__panier_.idLivre = livre.idLivre);
+
+//panier
+create or replace view panier as
+select idClient, prenomClient, nomClient, idLivre, titreLivre, coverLivre, count(idClient) as quantite, prixLivre, sum(prixLivre) as prixTotal from panier_v group by idLivre;
+
+//acheter
+insert into achete (idClient, idLivre, quantite, prixAchat)
+select idClient, idLivre, quantite, prixTotal from panier where idClient = 2;
+
+//achat
+create or replace view achat as
+select achete.idClient, client.prenomClient, client.nomClient, achete.idLivre, livre.titreLivre, achete.quantite, achete.prixAchat, achete.dateAchat
+from ((achete
+inner join client on achete.idClient = client.idClient)
+inner join livre on achete.idLivre = livre.idLivre);
+
+//setDate_achat
+delimiter $$
+create trigger setDate_achat after insert
+on achete
+for each row 
+
+begin
+
+update achete set dateAchat = now() where idClient = new.idClient;
+
+end$$
+
+delimiter ;
