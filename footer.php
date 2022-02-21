@@ -105,6 +105,7 @@
 <script src="assets/js/slick.js"></script>
 <script src="assets/js/lightbox.js"></script>
 <script src="assets/js/isotope.js"></script>
+<script src="assets/js/buttons.js"></script>
 
 <!-- Global Init -->
 <script src="assets/js/custom.js"></script>
